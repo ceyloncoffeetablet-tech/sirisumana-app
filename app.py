@@ -132,13 +132,12 @@ tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "⚙️ දත්ත පාලනය",
 ])
 
-# Grade List including Foundation Grade & English Medium
+# Grade List
 GRADES = [
-    "මූලික ශ්‍රේණිය",
+    "4 ශ්‍රේණිය",
     "1 ශ්‍රේණිය",
     "2 ශ්‍රේණිය",
     "3 ශ්‍රේණිය",
-    "4 ශ්‍රේණිය",
     "5 ශ්‍රේණිය",
     "English Medium 1",
     "English Medium 2",
@@ -150,7 +149,7 @@ GRADES = [
 # Years List
 YEARS = ["2025", "2026", "2027", "2028", "2029", "2030"]
 
-# List of all 10 subjects (Updated to 'සංස්කෘත')
+# List of all 10 subjects
 SUBJECTS = [
     "ත්‍රිපිටක ධර්මය (Tripitaka)",
     "සිංහල (Sinhala)",
@@ -165,18 +164,24 @@ SUBJECTS = [
 ]
 
 
-# Helper Function for Grading
+# Helper Function for Grading (Supports AB and numbers)
 def get_grade(marks):
-  if marks >= 75:
-    return "A"
-  elif marks >= 65:
-    return "B"
-  elif marks >= 50:
-    return "C"
-  elif marks >= 35:
-    return "S"
-  else:
-    return "F"
+  if str(marks).strip().upper() == "AB":
+    return "AB"
+  try:
+    m = float(marks)
+    if m >= 75:
+      return "A"
+    elif m >= 65:
+      return "B"
+    elif m >= 50:
+      return "C"
+    elif m >= 35:
+      return "S"
+    else:
+      return "F"
+  except:
+    return "AB"
 
 
 # ----------------------------------------------------
@@ -224,7 +229,7 @@ with tab0:
     st.write("මෙම පන්තියට තවමත් සිසුන් ලියාපදිංචි කර නැත.")
 
 # ----------------------------------------------------
-# TAB 1: DATA ENTRY (MANUAL / PHOTO / PDF)
+# TAB 1: DATA ENTRY (MANUAL / PHOTO / PDF with Edit Preview)
 # ----------------------------------------------------
 with tab1:
   st.header("ශිෂ්‍ය ලකුණු ඇතුළත් කිරීම")
@@ -240,7 +245,6 @@ with tab1:
   )
   st.divider()
 
-  # METHOD 1: PHOTO AI SCAN
   if "Photo" in entry_method:
     st.subheader("📸 ඡායාරූපයක් (Photo Image) මඟින් ලකුණු ලබා ගැනීම")
     uploaded_img = st.file_uploader(
@@ -278,10 +282,7 @@ with tab1:
         st.error("කරුණාකර API Key එක සකසන්න.")
       else:
         try:
-          with st.spinner(
-              "AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී (ටිකක් රැඳී"
-              " සිටින්න)..."
-          ):
+          with st.spinner("AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී..."):
             client = genai.Client(api_key=GEMINI_API_KEY)
             prompt_text = (
                 "මෙම ඡායාරූපයෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
@@ -290,32 +291,20 @@ with tab1:
                 " පාලි (Pali), සංස්කෘත (Sanskrit), ගණිතය (Maths), ඉංග්‍රීසි"
                 " (English), ඉතිහාසය (History), සමාජ විද්‍යාව (Social Sci.),"
                 " සෞඛ්‍ය විද්‍යාව (Health Sci.), භූගෝල විද්‍යාව (Geog. Phy.)\n"
-                "ලකුණු නැතිනම් 0 යොදන්න.\n"
+                "සිසුවෙකු නොපැමිණ ඇත්නම් (Absent) ලකුණු වෙනුවට 'AB' ලෙස"
+                " යොදන්න. ලකුණු නැතිනම් 0 යොදන්න.\n"
                 "JSON Format:\n"
                 '[{"Student ID": "3017", "Marks": {"ත්‍රිපිටක ධර්මය'
-                ' (Tripitaka)": 48, "සිංහල (Sinhala)": 62, "පාලි (Pali)": 60,'
+                ' (Tripitaka)": 48, "සිංහල (Sinhala)": "AB", "පාලි (Pali)": 60,'
                 ' "සංස්කෘත (Sanskrit)": 55, "ගණිතය (Maths)": 59, "ඉංග්‍රීසි'
                 ' (English)": 31, "ඉතිහාසය (History)": 0, "සමාජ විද්‍යාව (Social'
                 ' Sci.)": 0, "සෞඛ්‍ය විද්‍යාව (Health Sci.)": 0, "භූගෝල විද්‍යාව'
                 ' (Geog. Phy.)": 0}}]\n'
                 "වෙනත් කිසිදු අමතර සටහනක් නොලියා pure JSON පමණක් ලබාදෙන්න."
             )
-
-            max_retries = 3
-            response = None
-            for attempt in range(max_retries):
-              try:
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash", contents=[img, prompt_text]
-                )
-                break
-              except Exception as err:
-                if "503" in str(err) and attempt < max_retries - 1:
-                  time.sleep(3)
-                  continue
-                else:
-                  raise err
-
+            response = client.models.generate_content(
+                model="gemini-3.8-flash", contents=[img, prompt_text]
+            )
             raw_json = (
                 response.text.strip()
                 .replace("```json", "")
@@ -335,22 +324,35 @@ with tab1:
                       "Year": scan_year,
                       "Term": scan_term,
                       "Subject": sub,
-                      "Marks": int(mark) if str(mark).isdigit() else 0,
+                      "Marks": str(mark),
                       "Status": "Locked",
                   })
             if new_rows:
-              extracted_df = pd.DataFrame(new_rows)
-              st.session_state.student_data = pd.concat(
-                  [st.session_state.student_data, extracted_df],
-                  ignore_index=True,
+              st.session_state["temp_scanned_df"] = pd.DataFrame(new_rows)
+              st.success(
+                  "✅ AI ස්කෑන් කිරීම සාර්ථකයි! පහտින් ඇති වගුව පරීක්ෂා කර අවශ්‍ය"
+                  " වෙනස්කම් කර Save කරන්න."
               )
-              save_marks_data(st.session_state.student_data)
-              st.success("✅ Photo එකෙන් දත්ත සාර්ථකව ඇතුළත් කරගන්නා ලදී!")
-              st.dataframe(extracted_df, use_container_width=True)
         except Exception as e:
           st.error(f"දෝෂයක් සිදු විය: {str(e)}")
 
-  # METHOD 2: PDF AI SCAN
+    if "temp_scanned_df" in st.session_state:
+      st.subheader("✏️ ස්කෑන් කළ දත්ත පරීක්ෂා කර Edit කිරීම")
+      edited_scanned_df = st.data_editor(
+          st.session_state["temp_scanned_df"],
+          key="scanned_data_editor",
+          use_container_width=True,
+      )
+      if st.button("💾 මෙම දත්ත පද්ධතියට අන්තර්ගත කරන්න (Save)", type="primary"):
+        st.session_state.student_data = pd.concat(
+            [st.session_state.student_data, edited_scanned_df],
+            ignore_index=True,
+        )
+        save_marks_data(st.session_state.student_data)
+        del st.session_state["temp_scanned_df"]
+        st.success("දත්ත සාර්ථකව සුරකින ලදී!")
+        st.rerun()
+
   elif "PDF" in entry_method:
     st.subheader("📄 PDF File එකක් මඟින් ලකුණු ලබා ගැනීම")
     uploaded_pdf = st.file_uploader(
@@ -374,17 +376,12 @@ with tab1:
         st.error("කරුණාකර API Key එක සකසන්න.")
       else:
         try:
-          with st.spinner(
-              "AI මඟින් PDF එක පරීක්ෂා කරමින් පවතී (ටිකක් රැඳී"
-              " සිටින්න)..."
-          ):
+          with st.spinner("AI මඟින් PDF එක පරීක්ෂා කරමින් පවතී..."):
             client = genai.Client(api_key=GEMINI_API_KEY)
             pdf_bytes = uploaded_pdf.read()
-
             pdf_part = types.Part.from_bytes(
                 data=pdf_bytes, mime_type="application/pdf"
             )
-
             prompt_text = (
                 "මෙම PDF ගොනුවෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
                 " විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
@@ -392,32 +389,20 @@ with tab1:
                 " පාලි (Pali), සංස්කෘත (Sanskrit), ගණිතය (Maths), ඉංග්‍රීසි"
                 " (English), ඉතිහාසය (History), සමාජ විද්‍යාව (Social Sci.),"
                 " සෞඛ්‍ය විද්‍යාව (Health Sci.), භූගෝල විද්‍යාව (Geog. Phy.)\n"
-                "ලකුණු නැතිනම් 0 යොදන්න.\n"
+                "සිසුවෙකු නොපැමිණ ඇත්නම් (Absent) ලකුණු වෙනුවට 'AB' ලෙස"
+                " යොදන්න.\n"
                 "JSON Format:\n"
                 '[{"Student ID": "3017", "Marks": {"ත්‍රිපිටක ධර්මය'
-                ' (Tripitaka)": 48, "සිංහල (Sinhala)": 62, "පාලි (Pali)": 60,'
+                ' (Tripitaka)": 48, "සිංහල (Sinhala)": "AB", "පාලි (Pali)": 60,'
                 ' "සංස්කෘත (Sanskrit)": 55, "ගණිතය (Maths)": 59, "ඉංග්‍රීසි'
                 ' (English)": 31, "ඉතිහාසය (History)": 0, "සමාජ විද්‍යාව (Social'
                 ' Sci.)": 0, "සෞඛ්‍ය විද්‍යාව (Health Sci.)": 0, "භූගෝල විද්‍යාව'
                 ' (Geog. Phy.)": 0}}]\n'
                 "වෙනත් කිසිදු අමතර සටහනක් නොලියා pure JSON පමණක් ලබාදෙන්න."
             )
-
-            max_retries = 3
-            response = None
-            for attempt in range(max_retries):
-              try:
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash", contents=[pdf_part, prompt_text]
-                )
-                break
-              except Exception as err:
-                if "503" in str(err) and attempt < max_retries - 1:
-                  time.sleep(3)
-                  continue
-                else:
-                  raise err
-
+            response = client.models.generate_content(
+                model="gemini-3.8-flash", contents=[pdf_part, prompt_text]
+            )
             raw_json = (
                 response.text.strip()
                 .replace("```json", "")
@@ -437,22 +422,31 @@ with tab1:
                       "Year": pdf_year,
                       "Term": pdf_term,
                       "Subject": sub,
-                      "Marks": int(mark) if str(mark).isdigit() else 0,
+                      "Marks": str(mark),
                       "Status": "Locked",
                   })
             if new_rows:
-              extracted_df = pd.DataFrame(new_rows)
-              st.session_state.student_data = pd.concat(
-                  [st.session_state.student_data, extracted_df],
-                  ignore_index=True,
-              )
-              save_marks_data(st.session_state.student_data)
-              st.success("✅ PDF එකෙන් දත්ත සාර්ථකව ඇතුළත් කරගන්නා ලදී!")
-              st.dataframe(extracted_df, use_container_width=True)
+              st.session_state["temp_pdf_df"] = pd.DataFrame(new_rows)
+              st.success("✅ PDF ස්කෑන් කිරීම සාර්ථකයි! පහතින් පරීක්ෂා කර Save කරන්න.")
         except Exception as e:
           st.error(f"දෝෂයක් සිදු විය: {str(e)}")
 
-  # METHOD 3: MANUAL ENTRY
+    if "temp_pdf_df" in st.session_state:
+      st.subheader("✏️ PDF ස්කෑන් කළ දත්ත පරීක්ෂා කර Edit කිරීම")
+      edited_pdf_df = st.data_editor(
+          st.session_state["temp_pdf_df"],
+          key="pdf_data_editor",
+          use_container_width=True,
+      )
+      if st.button("💾 PDF දත්ත පද්ධතියට අන්තර්ගත කරන්න (Save)", type="primary"):
+        st.session_state.student_data = pd.concat(
+            [st.session_state.student_data, edited_pdf_df], ignore_index=True
+        )
+        save_marks_data(st.session_state.student_data)
+        del st.session_state["temp_pdf_df"]
+        st.success("දත්ත සාර්ථකව සුරකින ලදී!")
+        st.rerun()
+
   else:
     col1, col2 = st.columns(2)
     with col1:
@@ -467,7 +461,7 @@ with tab1:
       roster_list = st.session_state.roster_data.get(grade, [])
       if roster_list:
         selected_student_option = st.selectbox(
-            "ලියාපදිංචි සිසුන්ගෙන් තෝරන්න (නැතහොත් පහළින් ටයිප් කරන්න):",
+            "ලියාපදිංචි සිසුන්ගෙන් තෝරන්න:",
             ["-- අලුතින් ටයිප් කරන්න --"] + roster_list,
         )
         if selected_student_option != "-- අලුතින් ටයිප් කරන්න --":
@@ -482,11 +476,11 @@ with tab1:
         student_id = st.text_input("ඇතුළත් වීමේ අංකය / විභාග අංකය (Index No):")
 
     with col2:
-      st.subheader("විෂයයන් 10 සහ ලකුණු")
+      st.subheader("විෂයයන් 10 සහ ලකුණු (නොපැමිණි නම් AB ලියන්න)")
       marks_dict = {}
       for sub in SUBJECTS:
-        marks_dict[sub] = st.number_input(
-            f"{sub} ලකුණු:", min_value=0, max_value=100, value=0, step=1
+        marks_dict[sub] = st.text_input(
+            f"{sub} ලකුණු (ලකුණු හෝ AB):", value="0", key=f"mark_{sub}"
         )
 
     is_locked = False
@@ -504,15 +498,13 @@ with tab1:
 
     if is_locked and not admin_access:
       st.error(
-          "⛔ මෙම ශිෂ්‍යයාගේ මෙම වර්ෂයේ සහ වාරයේ ලකුණු දැනටමත් Lock කර ඇත."
-          " වෙනස් කිරීමට Admin අමතන්න."
+          "⛔ මෙම ශිෂ්‍යයාගේ ලකුණු දැනටමත් Lock කර ඇත. වෙනස් කිරීමට Admin"
+          " අමතන්න."
       )
     else:
       btn_col1, btn_col2 = st.columns(2)
       with btn_col1:
-        if st.button(
-            "💾 තාවකාලිකව සුරකින්න (Save Draft)", use_container_width=True
-        ):
+        if st.button("💾 තාවකාලිකව සුරකින්න (Save Draft)", use_container_width=True):
           if student_id:
             st.session_state.student_data = st.session_state.student_data[
                 ~(
@@ -529,7 +521,7 @@ with tab1:
                   "Year": year,
                   "Term": term,
                   "Subject": sub,
-                  "Marks": mark,
+                  "Marks": str(mark),
                   "Status": "Draft",
               })
             st.session_state.student_data = pd.concat(
@@ -537,9 +529,9 @@ with tab1:
                 ignore_index=True,
             )
             save_marks_data(st.session_state.student_data)
-            st.success("ලකුණු තාවකාලිකව සුරකින ලදී (Draft Mode)!")
+            st.success("ලකුණු තාවකාලිකව සුරකින ලදී!")
           else:
-            st.warning("කරුණාකර ශිෂ්‍ය අංකය ඇතුළත් කරන්න.")
+            st.warning("ਕරුණාකර ශිෂ්‍ය අංකය ඇතුළත් කරන්න.")
 
       with btn_col2:
         if st.button(
@@ -563,7 +555,7 @@ with tab1:
                   "Year": year,
                   "Term": term,
                   "Subject": sub,
-                  "Marks": mark,
+                  "Marks": str(mark),
                   "Status": "Locked",
               })
             st.session_state.student_data = pd.concat(
@@ -571,7 +563,7 @@ with tab1:
                 ignore_index=True,
             )
             save_marks_data(st.session_state.student_data)
-            st.success("ලකුණු සාර්ථකව පද්ධතියට එක් කර Lock කරන ලදී!")
+            st.success("ලකුණු සාර්ථකව Lock කරන ලදී!")
           else:
             st.warning("කරුණාකර ශිෂ්‍ය අංකය ඇතුළත් කරන්න.")
 
@@ -605,19 +597,36 @@ with tab2:
   ].copy()
 
   if sub_df.empty:
-    st.info(
-        "තෝරාගත් පන්තිය, වර්ෂය, වාරය සහ විෂය සඳහා කිසිදු දත්තයක් ඇතුළත් කර"
-        " නොමැත."
-    )
+    st.info("මෙම තේරීම සඳහා දත්ත ඇතුළත් කර නොමැත.")
   else:
     sub_df["සාමාර්ථය"] = sub_df["Marks"].apply(get_grade)
-    sub_df["සාධන මට්ටම"] = sub_df["Marks"].apply(lambda x: f"{x}%")
+    sub_df["සාධන මට්ටම"] = sub_df["Marks"].apply(
+        lambda x: "AB" if str(x).upper() == "AB" else f"{x}%"
+    )
     sub_df["ප්‍රගති මැනීම"] = sub_df["Marks"].apply(
-        lambda x: "යහපත්" if x >= 65 else ("මධ්‍යම" if x >= 35 else "දුර්වල")
+        lambda x: (
+            "නොපැමිණ ඇත (AB)"
+            if str(x).upper() == "AB"
+            else (
+                "යහපත්"
+                if float(x if str(x).replace(".", "").isdigit() else 0) >= 65
+                else (
+                    "මධ්‍යම"
+                    if float(x if str(x).replace(".", "").isdigit() else 0) >= 35
+                    else "දුර්වල"
+                )
+            )
+        )
     )
     sub_df["විශ්ලේෂණයන්"] = sub_df["Marks"].apply(
         lambda x: (
-            "ලකුණු මට්ටම උසස් කරගත යුතුය" if x < 50 else "සාධනීය මට්ටමක පවතී"
+            "විභාගයට පෙනී නොසිට ඇත"
+            if str(x).upper() == "AB"
+            else (
+                "ලකුණු මට්ටම උසස් කරගත යුතුය"
+                if float(x if str(x).replace(".", "").isdigit() else 0) < 50
+                else "සාධනීය මට්ටමක පවතී"
+            )
         )
     )
 
@@ -637,15 +646,6 @@ with tab2:
     ]]
 
     st.dataframe(show_table, use_container_width=True)
-
-    r1_30 = len(sub_df[(sub_df["Marks"] >= 1) & (sub_df["Marks"] <= 30)])
-    r30_40 = len(sub_df[(sub_df["Marks"] > 30) & (sub_df["Marks"] <= 40)])
-    r40_50 = len(sub_df[(sub_df["Marks"] > 40) & (sub_df["Marks"] <= 50)])
-    r50_60 = len(sub_df[(sub_df["Marks"] > 50) & (sub_df["Marks"] <= 60)])
-    r60_70 = len(sub_df[(sub_df["Marks"] > 60) & (sub_df["Marks"] <= 70)])
-    r70_80 = len(sub_df[(sub_df["Marks"] > 70) & (sub_df["Marks"] <= 80)])
-    r80_90 = len(sub_df[(sub_df["Marks"] > 80) & (sub_df["Marks"] <= 90)])
-    r90_100 = len(sub_df[(sub_df["Marks"] > 90) & (sub_df["Marks"] <= 100)])
 
     rows_html = ""
     for idx, row in show_table.iterrows():
@@ -672,74 +672,28 @@ with tab2:
                 table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
                 th, td {{ border: 1px solid #000; padding: 6px; text-align: left; font-size: 13px; }}
                 th {{ background-color: #f2f2f2; text-align: center; }}
-                .flex-container {{ display: flex; justify-content: space-between; margin-top: 20px; }}
-                .dist-table {{ width: 45%; }}
-                .notes-box {{ width: 50%; border: 1px solid #000; padding: 10px; font-size: 13px; }}
-                .signatures {{ margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; font-size: 12px; }}
             </style>
         </head>
         <body>
             <div class="header-box">
-                <h2 style="margin:2px;">මහ/දෙනු/ සිරිසුමන ද්විභාෂා පිරිවෙණ</h2>
-                <h3 style="margin:2px;">විභාග අංශය</h3>
-                <p style="margin:2px;">වාර පරීක්ෂණ ප්‍රතිඵල විශ්ලේෂණ වාර්තාව ({sel_term}) - {sel_year}</p>
-                <div style="display:flex; justify-content:space-between; margin-top:10px;">
-                    <span>ශ්‍රේණිය :- {sel_grade}</span>
-                    <span>වර්ෂය :- {sel_year}</span>
-                    <span>විෂය :- {sel_subject}</span>
-                </div>
+                <h2>මහ/දෙනු/ සිරිසුමන ද්විභාෂා පිරිවෙණ</h2>
+                <p>වාර පරීක්ෂණ ප්‍රතිඵල විශ්ලේෂණ වාර්තාව ({sel_term}) - {sel_year}</p>
+                <p>ශ්‍රේණිය :- {sel_grade} | විෂය :- {sel_subject}</p>
             </div>
-
             <table>
                 <thead>
                     <tr>
-                        <th style="width:10%;">අනු අංකය</th>
-                        <th style="width:20%;">විභාග අංකය</th>
-                        <th style="width:15%;">සාධන මට්ටම</th>
-                        <th style="width:15%;">සාමාර්ථය</th>
-                        <th style="width:15%;">ප්‍රගති මැනීම</th>
-                        <th style="width:25%;">විශ්ලේෂණයන්</th>
+                        <th>අනු අංකය</th><th>විභාග අංකය</th><th>සාධන මට්ටම</th><th>සාමාර්ථය</th><th>ප්‍රගති මැනීම</th><th>විශ්ලේෂණයන්</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {rows_html}
-                </tbody>
+                <tbody>{rows_html}</tbody>
             </table>
-
-            <div class="flex-container">
-                <div class="dist-table">
-                    <h4>📊 ලකුණු පරාස අනුව සාධන මට්ටමට ළඟාවීම</h4>
-                    <table>
-                        <tr><th>ලකුණු පරාසය</th><th>සිසුන් ගණන</th></tr>
-                        <tr><td>01-30</td><td style="text-align:center;">{r1_30}</td></tr>
-                        <tr><td>30-40</td><td style="text-align:center;">{r30_40}</td></tr>
-                        <tr><td>40-50</td><td style="text-align:center;">{r40_50}</td></tr>
-                        <tr><td>50-60</td><td style="text-align:center;">{r50_60}</td></tr>
-                        <tr><td>60-70</td><td style="text-align:center;">{r60_70}</td></tr>
-                        <tr><td>70-80</td><td style="text-align:center;">{r70_80}</td></tr>
-                        <tr><td>80-90</td><td style="text-align:center;">{r80_90}</td></tr>
-                        <tr><td>90-100</td><td style="text-align:center;">{r90_100}</td></tr>
-                    </table>
-                </div>
-
-                <div class="notes-box">
-                    <h4>📝 ප්‍රතිඵල සමාලෝචනය පිළිබඳ පොදු විශ්ලේෂණ සටහන</h4>
-                    <p>විෂයභාර ගුරුභවතාගේ නිගමන හා සටහන්:</p>
-                    <p style="margin-top:20px; border-bottom:1px dotted #000; min-height:80px;">මෙම වාරයේ පන්තියේ සමස්ත සාධන මට්ටම යහපත් තත්වයක පවතී. අඩු ලකුණු ලබාගත් සිසුන් සඳහා විශේෂ වැඩසටහන් ක්‍රියාත්මක කළ යුතුය.</p>
-                </div>
-            </div>
-
-            <div class="signatures">
-                <div>...............................................<br>(විෂයභාර ගුරුභවතා)</div>
-                <div>...............................................<br>(අංශ ප්‍රධාන ගුරුභවතා)</div>
-                <div>...............................................<br>(පරිවේණාධිපති හිමි)</div>
-            </div>
         </body>
         </html>
         """
 
     st.download_button(
-        label="📥 නිල වාර්තාව Download කරගන්න (Printable Document)",
+        label="📥 නිල වාර්තාව Download කරගන්න",
         data=html_doc,
         file_name=f"{sel_grade}_{sel_year}_{sel_subject}_Report.html",
         mime="text/html",
@@ -753,106 +707,123 @@ with tab2:
 with tab3:
   st.header("👤 ශිෂ්‍යානුබද්ධ ප්‍රගති විශ්ලේෂණය")
   if st.session_state.student_data.empty:
-    st.info("විශ්ලේෂණය සඳහා කිසිදු දත්තයක් ඇතුළත් කර නොමැත.")
+    st.info("දත්ත නොමැත.")
   else:
     st_year = st.selectbox("වර්ෂය තෝරන්න:", YEARS, index=1, key="st_year")
-
     filtered_by_year = st.session_state.student_data[
         st.session_state.student_data["Year"] == st_year
     ]
-    if filtered_by_year.empty:
-      st.info("මෙම වර්ෂය සඳහා දත්ත නොමැත.")
-    else:
+    if not filtered_by_year.empty:
       student_list = filtered_by_year["Student ID"].unique()
-      selected_student = st.selectbox(
-          "විශ්ලේෂණය සඳහා ශිෂ්‍ය අංකය තෝරන්න:", student_list, key="st_select"
-      )
-
+      selected_student = st.selectbox("ශිෂ්‍ය අංකය තෝරන්න:", student_list)
       student_df = filtered_by_year[
           filtered_by_year["Student ID"] == selected_student
-      ]
-      s_grade = student_df["Grade"].iloc[0]
-
-      st.subheader(
-          f"විභාග අංකය: {selected_student} | ශ්‍රේණිය: {s_grade} | වර්ෂය:"
-          f" {st_year}"
-      )
-
+      ].copy()
+      student_df["NumericMarks"] = pd.to_numeric(
+          student_df["Marks"], errors="coerce"
+      ).fillna(0)
       fig = px.bar(
           student_df,
           x="Subject",
-          y="Marks",
+          y="NumericMarks",
           color="Term",
           barmode="group",
-          title=f"{st_year} වර්ෂයේ වාර 3 හි විෂයයන් 10 ලකුණු සංසන්දනය",
-          text_auto=True,
+          title="වාර 3 හි විෂයයන් ලකුණු සංසන්දනය (AB සඳහා 0 ලෙස දැක්වේ)",
       )
       st.plotly_chart(fig, use_container_width=True)
-
-      pivot_df = (
-          student_df.pivot(index="Subject", columns="Term", values="Marks")
-          .fillna(0)
-      )
-      st.write("### වාර 3 හි විෂයයන් අනුව ලකුණු සාරාංශය")
-      st.dataframe(pivot_df, use_container_width=True)
 
 # ----------------------------------------------------
 # TAB 4: CLASS OVERALL ANALYSIS
 # ----------------------------------------------------
 with tab4:
   st.header("🏫 සමස්ත පන්ති සාධන විශ්ලේෂණය")
-  if st.session_state.student_data.empty:
-    st.info("විශ්ලේෂණය සඳහා කිසිදු දත්තයක් ඇතුළත් කර නොමැත.")
-  else:
+  if not st.session_state.student_data.empty:
     col_cl1, col_cl2, col_cl3 = st.columns(3)
     with col_cl1:
-      c_grade = st.selectbox("නිරීක්ෂණයට ශ්‍රේණිය තෝරන්න:", GRADES, key="cl_grade")
+      c_grade = st.selectbox("ශ්‍රේණිය:", GRADES, key="cl_grade")
     with col_cl2:
-      c_year = st.selectbox("නිරීක්ෂණයට වර්ෂය තෝරන්න:", YEARS, index=1, key="cl_year")
+      c_year = st.selectbox("වර්ෂය:", YEARS, index=1, key="cl_year")
     with col_cl3:
       c_term = st.selectbox(
-          "නිරීක්ෂණයට වාරය තෝරන්න:",
-          ["1 වන වාරය", "2 වන වාරය", "3 වන වාරය"],
-          key="cl_term",
+          "වාරය:", ["1 වන වාරය", "2 වන වාරය", "3 වන වාරය"], key="cl_term"
       )
 
     class_df = st.session_state.student_data[
         (st.session_state.student_data["Grade"] == c_grade)
         & (st.session_state.student_data["Year"] == c_year)
         & (st.session_state.student_data["Term"] == c_term)
-    ]
-
-    if class_df.empty:
-      st.warning("මෙම පන්තිය, වර්ෂය සහ වාරය සඳහා දත්ත නොමැත.")
-    else:
+    ].copy()
+    if not class_df.empty:
+      class_df["NumericMarks"] = pd.to_numeric(
+          class_df["Marks"], errors="coerce"
+      ).fillna(0)
       fig_class = px.box(
-          class_df,
-          x="Subject",
-          y="Marks",
-          points="all",
-          title=(
-              f"{c_grade} ({c_year}) - {c_term} විෂයයන් අනුව ලකුණු ව්‍යාප්තිය"
-          ),
+          class_df, x="Subject", y="NumericMarks", title="විෂයයන් අනුව ලකුණු ව්‍යාප්තිය"
       )
       st.plotly_chart(fig_class, use_container_width=True)
 
 # ----------------------------------------------------
-# TAB 5: DATA MANAGEMENT & CLEAR BUTTON
+# TAB 5: DATA MANAGEMENT, LIVE EDITING & DOWNLOAD
 # ----------------------------------------------------
 with tab5:
-  st.header("⚙️ දත්ත පාලන මධ්‍යස්ථානය")
-  st.dataframe(st.session_state.student_data, use_container_width=True)
+  st.header("⚙️ දත්ත පාලන සහ සෘජු සංස්කරණ මධ්‍යස්ථානය (Data Editor)")
+  st.info(
+      "💡 ඔබට පහත වගුව තුළ ඇති ඕනෑම අගයක් (ලකුණු, විභාග අංක, AB ආදී වශයෙන්)"
+      " සෘජුවම ක්ලික් කර වෙනස් කරගත හැක! වෙනස් කළ පසු පහත ඇති Save බොත්තම"
+      " ක්ලික් කරන්න."
+  )
+
+  # Live Editable DataFrame Table
+  edited_master_df = st.data_editor(
+      st.session_state.student_data,
+      key="master_data_editor",
+      use_container_width=True,
+      num_rows="dynamic",
+  )
+
+  col_sv1, col_sv2 = st.columns(2)
+  with col_sv1:
+    if st.button(
+        "💾 වගුවේ කළ වෙනස්කම් Save කරගන්න",
+        type="primary",
+        use_container_width=True,
+    ):
+      st.session_state.student_data = edited_master_df
+      save_marks_data(st.session_state.student_data)
+      st.success("සියලු වෙනස්කම් සාර්ථකව සුරකින ලදී!")
+      st.rerun()
+
+  st.divider()
+  st.subheader("📥 දත්ත උපස්ථ කරගැනීම (Backup Data)")
+
+  if not st.session_state.student_data.empty:
+    json_data = st.session_state.student_data.to_json(
+        orient="records", force_ascii=False
+    )
+    st.download_button(
+        label="📥 දත්ත සියල්ල JSON ලෙස Download කරගන්න",
+        data=json_data,
+        file_name="student_marks_backup.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+    csv_data = st.session_state.student_data.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="📥 දත්ත සියල්ල CSV ලෙස Download කරගන්න",
+        data=csv_data,
+        file_name="student_marks_backup.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+  else:
+    st.info("ඩවුන්ලෝඩ් කිරීමට දත්ත කිසිවක් නොමැත.")
 
   st.divider()
   st.subheader("🧹 දත්ත ඉවත් කිරීම (Reset Data)")
-
   col_del1, col_del2 = st.columns(2)
   with col_del1:
-    if st.button(
-        "🗑️ පරීක්ෂණ දත්ත සියල්ල ඉවත් කරන්න (Clear All Data)",
-        type="secondary",
-        use_container_width=True,
-    ):
+    if st.button("🗑️ සියලු දත්ත ඉවත් කරන්න", use_container_width=True):
       st.session_state.student_data = pd.DataFrame(columns=[
           "Student ID",
           "Grade",
@@ -863,16 +834,13 @@ with tab5:
           "Status",
       ])
       save_marks_data(st.session_state.student_data)
-      st.success("සියලු දත්ත සාර්ථකව පද්ධතියෙන් ඉවත් කරන ලදී!")
+      st.success("දත්ත ඉවත් කරන ලදී!")
       st.rerun()
 
   with col_del2:
     if admin_access:
-      if st.button(
-          "🔓 සියලුම Locked Data Unlock කරන්න (Admin Only)",
-          use_container_width=True,
-      ):
+      if st.button("🔓 සියලුම Locked Data Unlock කරන්න", use_container_width=True):
         st.session_state.student_data["Status"] = "Draft"
         save_marks_data(st.session_state.student_data)
-        st.success("සියලුම දත්ත Unlock කරන ලදී!")
+        st.success("දත්ත Unlock කරන ලදී!")
         st.rerun()
