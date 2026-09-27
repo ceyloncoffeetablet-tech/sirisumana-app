@@ -304,7 +304,7 @@ with tab1:
             )
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash", contents=[img, prompt_text]
+                model="gemini-3.8-flash", contents=[img, prompt_text]
             )
             raw_json = (
                 response.text.strip()
@@ -396,7 +396,7 @@ with tab1:
             )
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash", contents=[pdf_part, prompt_text]
+                model="gemini-3.8-flash", contents=[pdf_part, prompt_text]
             )
             raw_json = (
                 response.text.strip()
@@ -790,7 +790,6 @@ with tab3:
           filtered_by_year["Student ID"] == selected_student
       ]
 
-      # Convert Marks to numeric for plotting (treating AB as 0 or NaN for graphs)
       plot_df = student_df.copy()
       plot_df["NumericMarks"] = pd.to_numeric(
           plot_df["Marks"], errors="coerce"
