@@ -132,7 +132,7 @@ tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "⚙️ දත්ත පාලනය හා සංස්කරණය",
 ])
 
-# Grade List including Foundation Grade & English Medium
+# Grade List
 GRADES = [
     "මූලික ශ්‍රේණිය",
     "1 ශ්‍රේණිය",
@@ -150,19 +150,33 @@ GRADES = [
 # Years List
 YEARS = ["2025", "2026", "2027", "2028", "2029", "2030"]
 
-# List of all 10 subjects
-SUBJECTS = [
-    "ත්‍රිපිටක ධර්මය (Tripitaka)",
-    "සිංහල (Sinhala)",
-    "පාලි (Pali)",
-    "සංස්කෘත (Sanskrit)",
-    "ගණිතය (Maths)",
-    "ඉංග්‍රීසි (English)",
-    "ඉතිහාසය (History)",
-    "සමාජ විද්‍යාව (Social Sci.)",
-    "සෞඛ්‍ය විද්‍යාව (Health Sci.)",
-    "භූගෝල විද්‍යාව (Geog. Phy.)",
-]
+
+# Function to get subjects based on grade
+def get_subjects_for_grade(grade_name):
+  if grade_name in ["මූලික ශ්‍රේණිය", "1 ශ්‍රේණිය", "2 ශ්‍රේණිය"]:
+    # Primary grades without history, social sci, health, geography
+    return [
+        "ත්‍රිපිටක ධර්මය (Tripitaka)",
+        "සිංහල (Sinhala)",
+        "පාලි (Pali)",
+        "සංස්කෘත (Sanskrit)",
+        "ගණිතය (Maths)",
+        "ඉංග්‍රීසි (English)",
+    ]
+  else:
+    # All 10 subjects for 3, 4, 5 and English Medium grades
+    return [
+        "ත්‍රිපිටක ධර්මය (Tripitaka)",
+        "සිංහල (Sinhala)",
+        "පාලි (Pali)",
+        "සංස්කෘත (Sanskrit)",
+        "ගණිතය (Maths)",
+        "ඉංග්‍රීසි (English)",
+        "ඉතිහාසය (History)",
+        "සමාජ විද්‍යාව (Social Sci.)",
+        "සෞඛ්‍ය විද්‍යාව (Health Sci.)",
+        "භූගෝල විද්‍යාව (Geog. Phy.)",
+    ]
 
 
 # Helper Function for Grading (Handling 'AB' gracefully)
@@ -180,7 +194,7 @@ def get_grade(marks):
     else:
       return "F"
   except Exception:
-    return str(marks)  # Returns 'AB' if present
+    return str(marks)
 
 
 # ----------------------------------------------------
@@ -275,6 +289,8 @@ with tab1:
           "වාරය:", ["1 වන වාරය", "2 වන වාරය", "3 වන වාරය"], key="img_scan_term"
       )
 
+    current_scan_subjects = get_subjects_for_grade(scan_grade)
+
     if uploaded_img and st.button(
         "🔍 Photo එක Scan කර දත්ත ලබා ගන්න", type="primary", key="btn_img_scan"
     ):
@@ -284,22 +300,13 @@ with tab1:
         try:
           with st.spinner("AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී..."):
             client = genai.Client(api_key=GEMINI_API_KEY)
+            sub_list_str = ", ".join(current_scan_subjects)
             prompt_text = (
-                "මෙම ඡායාරූපයෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
-                " විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
-                "අවශ්‍ය විෂයන්: ත්‍රිපිටක ධර්මය (Tripitaka), සිංහල (Sinhala),"
-                " පාලි (Pali), සංස්කෘත (Sanskrit), ගණිතය (Maths), ඉංග්‍රීසි"
-                " (English), ඉතිහාසය (History), සමාජ විද්‍යාව (Social Sci.),"
-                " සෞඛ්‍ය විද්‍යාව (Health Sci.), භූගෝල විද්‍යාව (Geog. Phy.)\n"
+                f"මෙම ඡායාරූපයෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
+                f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
+                f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
                 "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න. ලකුණු"
                 " නැති නම් 0 යොදන්න.\n"
-                "JSON Format:\n"
-                '[{"Student ID": "3017", "Marks": {"ත්‍රිපිටක ධර්මය'
-                ' (Tripitaka)": 48, "සිංහල (Sinhala)": "AB", "පාලි (Pali)": 60,'
-                ' "සංස්කෘත (Sanskrit)": 55, "ගණිතය (Maths)": 59, "ඉංග්‍රීසි'
-                ' (English)": 31, "ඉතිහාසය (History)": 0, "සමාජ විද්‍යාව (Social'
-                ' Sci.)": 0, "සෞඛ්‍ය විද්‍යාව (Health Sci.)": 0, "භූගෝල විද්‍යාව'
-                ' (Geog. Phy.)": 0}}]\n'
                 "වෙනත් කිසිදු අමතර සටහනක් නොලියා pure JSON පමණක් ලබාදෙන්න."
             )
 
@@ -318,7 +325,7 @@ with tab1:
               s_id = str(st_data.get("Student ID", ""))
               s_marks = st_data.get("Marks", {})
               for sub, mark in s_marks.items():
-                if sub in SUBJECTS:
+                if sub in current_scan_subjects:
                   m_val = str(mark).strip().upper()
                   if m_val != "AB":
                     try:
@@ -363,6 +370,8 @@ with tab1:
           "වාරය:", ["1 වන වාරය", "2 වන වාරය", "3 වන වාරය"], key="pdf_scan_term"
       )
 
+    current_pdf_subjects = get_subjects_for_grade(pdf_grade)
+
     if uploaded_pdf and st.button(
         "📄 PDF එක Scan කර දත්ත ලබා ගන්න", type="primary", key="btn_pdf_scan"
     ):
@@ -376,22 +385,13 @@ with tab1:
             pdf_part = types.Part.from_bytes(
                 data=pdf_bytes, mime_type="application/pdf"
             )
+            sub_list_str = ", ".join(current_pdf_subjects)
 
             prompt_text = (
-                "මෙම PDF ගොනුවෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
-                " විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
-                "අවශ්‍ය විෂයන්: ත්‍රිපිටක ධර්මය (Tripitaka), සිංහල (Sinhala),"
-                " පාලි (Pali), සංස්කෘත (Sanskrit), ගණිතය (Maths), ඉංග්‍රීසි"
-                " (English), ඉතිහාසය (History), සමාජ විද්‍යාව (Social Sci.),"
-                " සෞඛ්‍ය විද්‍යාව (Health Sci.), භූගෝල විද්‍යාව (Geog. Phy.)\n"
+                f"මෙම PDF ගොනුවෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
+                f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
+                f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
                 "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න.\n"
-                "JSON Format:\n"
-                '[{"Student ID": "3017", "Marks": {"ත්‍රිපිටක ධර්මය'
-                ' (Tripitaka)": 48, "සිංහල (Sinhala)": "AB", "පාලි (Pali)": 60,'
-                ' "සංස්කෘත (Sanskrit)": 55, "ගණිතය (Maths)": 59, "ඉංග්‍රීසි'
-                ' (English)": 31, "ඉතිහාසය (History)": 0, "සමාජ විද්‍යාව (Social'
-                ' Sci.)": 0, "සෞඛ්‍ය විද්‍යාව (Health Sci.)": 0, "භූගෝල විද්‍යාව'
-                ' (Geog. Phy.)": 0}}]\n'
                 "වෙනත් කිසිදු අමතර සටහනක් නොලියා pure JSON පමණක් ලබාදෙන්න."
             )
 
@@ -410,7 +410,7 @@ with tab1:
               s_id = str(st_data.get("Student ID", ""))
               s_marks = st_data.get("Marks", {})
               for sub, mark in s_marks.items():
-                if sub in SUBJECTS:
+                if sub in current_pdf_subjects:
                   m_val = str(mark).strip().upper()
                   if m_val != "AB":
                     try:
@@ -450,6 +450,8 @@ with tab1:
           key="entry_term",
       )
 
+      current_subjects = get_subjects_for_grade(grade)
+
       roster_list = st.session_state.roster_data.get(grade, [])
       if roster_list:
         selected_student_option = st.selectbox(
@@ -468,9 +470,9 @@ with tab1:
         student_id = st.text_input("ඇතුළත් වීමේ අංකය / විභාග අංකය (Index No):")
 
     with col2:
-      st.subheader("විෂයයන් 10 සහ ලකුණු (သို့မဟုတ် AB)")
+      st.subheader(f"{grade} සඳහා අදාළ විෂයයන් සහ ලකුණු")
       marks_dict = {}
-      for sub in SUBJECTS:
+      for sub in current_subjects:
         marks_dict[sub] = st.text_input(
             f"{sub} ලකුණු (ලකුණු හෝ AB):", value="0", key=f"manual_{sub}"
         )
@@ -582,6 +584,10 @@ with tab2:
   col_sel1, col_sel2, col_sel3, col_sel4 = st.columns(4)
   with col_sel1:
     sel_grade = st.selectbox("ශ්‍රේණිය තෝරන්න:", GRADES, key="sub_grade")
+
+  # Dynamic subject list for report filter
+  available_subjects_for_report = get_subjects_for_grade(sel_grade)
+
   with col_sel2:
     sel_year = st.selectbox("වර්ෂය තෝරන්න:", YEARS, index=1, key="sub_year")
   with col_sel3:
@@ -591,7 +597,9 @@ with tab2:
         key="sub_term",
     )
   with col_sel4:
-    sel_subject = st.selectbox("විෂය තෝරන්න:", SUBJECTS, key="sub_subject")
+    sel_subject = st.selectbox(
+        "විෂය තෝරන්න:", available_subjects_for_report, key="sub_subject"
+    )
 
   st.divider()
 
@@ -649,7 +657,7 @@ with tab2:
 
     st.dataframe(show_table, use_container_width=True)
 
-    # Counting valid numeric ranges safely
+
     def count_range(df_in, low, high):
       cnt = 0
       for val in df_in["Marks"]:
@@ -660,6 +668,7 @@ with tab2:
         except Exception:
           pass
       return cnt
+
 
     r1_30 = count_range(sub_df, 1, 30)
     r30_40 = count_range(sub_df, 30, 40)
