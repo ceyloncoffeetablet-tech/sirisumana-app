@@ -381,7 +381,7 @@ with tab1:
               "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
           )
 
-          # Retry mechanism for 503 errors
+          # Retry mechanism for 503 or transient errors
           for attempt in range(3):
             try:
               response = client.models.generate_content(
@@ -392,7 +392,7 @@ with tab1:
               break
             except Exception as api_err:
               if "503" in str(api_err) or "UNAVAILABLE" in str(api_err):
-                time.sleep(3)  # Wait 3 seconds before retrying
+                time.sleep(3)
               else:
                 raise api_err
 
@@ -438,8 +438,8 @@ with tab1:
             st.error(f"දත්ත සැකසීමේ දෝෂයක් සිදු විය: {str(e)}")
         else:
           st.error(
-              "⚠️ සේවාව තාවකාලිකව කාර්යබහුලයි (503). කරුණාකර තවත් වාරයක්"
-              " 'Photo එක Scan කර දත්ත ලබා ගන්න' බටන් එක ක්ලික් කරන්න."
+              "⚠️ සේවාව තාවකාලිකව කාර්යබහුලයි. කරුණාකර තවත් වාරයක් 'Photo එක"
+              " Scan කර දත්ත ලබා ගන්න' බටන් එක ක්ලික් කරන්න."
           )
 
   elif "PDF" in entry_method:
@@ -538,8 +538,8 @@ with tab1:
             st.error(f"දත්ත සැකසීමේ දෝෂයක් සිදු විය: {str(e)}")
         else:
           st.error(
-              "⚠️ සේවාව තාවකාලිකව කාර්යබහුලයි (503). කරුණාකර තවත් වාරයක්"
-              " උත්සාහ කරන්න."
+              "⚠️ සේවාව තාවකාලිකව කාර්යබහුලයි. කරුණාකර තවත් වාරයක් උත්සාහ"
+              " කරන්න."
           )
 
   else:
