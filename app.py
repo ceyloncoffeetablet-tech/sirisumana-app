@@ -608,7 +608,25 @@ with tab4:
 # ----------------------------------------------------
 with tab5:
   st.header("⚙️ දත්ත පාලනය හා සෘජු සංස්කරණය (Data Editor)")
-  st.info("පහත වගුවේ ඇති දත්ත ඔබට සෘජුවම Edit කිරීමට හෝ Paste කිරීමට හැක.")
+  st.info("පරණ ඇප් එකෙන් ඩවුන්ලෝඩ් කරගත් CSV ගොනුව පහතින් Upload කරන්න.")
+
+  # CSV File Uploader Added Here
+  uploaded_csv = st.file_uploader(
+      "📁 පරණ ඇප් එකේ CSV ෆයිල් එක මෙහි Upload කරන්න", type=["csv"]
+  )
+  if uploaded_csv is not None:
+    try:
+      imported_df = pd.read_csv(uploaded_csv)
+      st.session_state.student_data = imported_df
+      save_marks_data(imported_df)
+      st.success(
+          "✅ CSV ෆයිල් එකේ දත්ත සාර්ථකව අලුත් ඇප් එකට ඇතුළත් කර සුරක්ෂිත කරන ලදී!"
+      )
+      st.rerun()
+    except Exception as e:
+      st.error(f"දෝෂයක් සිදු විය: {str(e)}")
+
+  st.divider()
 
   if (
       st.session_state.student_data is not None
