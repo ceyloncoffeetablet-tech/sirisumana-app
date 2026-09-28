@@ -208,6 +208,79 @@ def get_grade(marks):
     return str(marks)
 
 
+# Automatic Data Cleaner & Mapper for Imported CSV
+def clean_imported_dataframe(df):
+  # Standardize column names if variations exist
+  col_rename = {}
+  for col in df.columns:
+    c_lower = str(col).strip().lower()
+    if "student" in c_lower or "id" in c_lower or "අංක" in c_lower:
+      col_rename[col] = "Student ID"
+    elif "grade" in c_lower or "ශ්‍රේණි" in c_lower:
+      col_rename[col] = "Grade"
+    elif "year" in c_lower or "වර්ෂ" in c_lower:
+      col_rename[col] = "Year"
+    elif "term" in c_lower or "වාර" in c_lower:
+      col_rename[col] = "Term"
+    elif "subject" in c_lower or "විෂය" in c_lower:
+      col_rename[col] = "Subject"
+    elif "mark" in c_lower or "ලකුණු" in c_lower:
+      col_rename[col] = "Marks"
+    elif "status" in c_lower:
+      col_rename[col] = "Status"
+  df = df.rename(columns=col_rename)
+
+  required_cols = [
+      "Student ID",
+      "Grade",
+      "Year",
+      "Term",
+      "Subject",
+      "Marks",
+      "Status",
+  ]
+  for col in required_cols:
+    if col not in df.columns:
+      df[col] = ""
+
+  # Clean and map grades and subjects to match standard app formats
+  def clean_grade_name(g):
+    g_str = str(g).strip()
+    for valid_g in GRADES:
+      if valid_g in g_str or g_str in valid_g:
+        return valid_g
+    return g_str
+
+  def clean_subject_name(s):
+    s_str = str(s).strip()
+    all_possible_subs = [
+        "ත්‍රිපිටක ධර්මය (Tripitaka)",
+        "සිංහල (Sinhala)",
+        "පාලි (Pali)",
+        "සංස්කෘත (Sanskrit)",
+        "ගණිතය (Maths)",
+        "ඉංග්‍රීසි (English)",
+        "ඉතිහාසය (History)",
+        "සමාජ විද්‍යාව (Social Sci.)",
+        "සෞඛ්‍ය විද්‍යාව (Health Sci.)",
+        "භූගෝල විද්‍යාව (Geog. Phy.)",
+    ]
+    for valid_s in all_possible_subs:
+      # Match base subject name (e.g., 'සිංහල' or 'Maths')
+      base_name = valid_s.split("(")[0].strip()
+      if base_name in s_str or s_str in valid_s:
+        return valid_s
+    return s_str
+
+  df["Grade"] = df["Grade"].apply(clean_grade_name)
+  df["Subject"] = df["Subject"].apply(clean_subject_name)
+  df["Year"] = df["Year"].astype(str).str.strip()
+  df["Term"] = df["Term"].astype(str).str.strip()
+  df["Student ID"] = df["Student ID"].astype(str).str.strip()
+
+  return df[required_cols]
+
+
 # ----------------------------------------------------
 # TAB 0: STUDENT ROSTER MANAGEMENT
 # ----------------------------------------------------
@@ -610,17 +683,19 @@ with tab5:
   st.header("⚙️ දත්ත පාලනය හා සෘජු සංස්කරණය (Data Editor)")
   st.info("පරණ ඇප් එකෙන් ඩවුන්ලෝඩ් කරගත් CSV ගොනුව පහතින් Upload කරන්න.")
 
-  # CSV File Uploader Added Here
+  # CSV File Uploader with Auto-Cleaning & Mapping
   uploaded_csv = st.file_uploader(
       "📁 පරණ ඇප් එකේ CSV ෆයිල් එක මෙහි Upload කරන්න", type=["csv"]
   )
   if uploaded_csv is not None:
     try:
-      imported_df = pd.read_csv(uploaded_csv)
+      raw_imported_df = pd.read_csv(uploaded_csv)
+      imported_df = clean_imported_dataframe(raw_imported_df)
       st.session_state.student_data = imported_df
       save_marks_data(imported_df)
       st.success(
-          "✅ CSV ෆයිල් එකේ දත්ත සාර්ථකව අලුත් ඇප් එකට ඇතුළත් කර සුරක්ෂිත කරන ලදී!"
+          "✅ CSV ෆයිල් එක ස්වයංක්‍රීයව පිරිසිදු කර, අලුත් ඇප් එකට ගැලපෙන ලෙස"
+          " සාර්ථකව ඇතුළත් කර සුරක්ෂිත කරන ලදී!"
       )
       st.rerun()
     except Exception as e:
