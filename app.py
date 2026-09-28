@@ -329,37 +329,43 @@ with tab1:
         success_scan = False
         response = None
         with st.spinner("AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී..."):
-          client = genai.Client(api_key=GEMINI_API_KEY)
-          sub_list_str = ", ".join(current_scan_subjects)
-          prompt_text = (
-              f"මෙම ඡායාරූපයෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
-              f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
-              f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
-              "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
-          )
+          try:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            sub_list_str = ", ".join(current_scan_subjects)
+            prompt_text = (
+                f"මෙම ඡායාරූපයෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
+                f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ලැයිස්තු ආකෘතියෙන් පමණක් ලබාදෙන්න (markdown code blocks රහිතව හෝ සමඟ පිළිගත හැක):\n"
+                f"[{{\"Student ID\": \"3017\", \"Marks\": {{\"විෂය නම\": ලකුණු}}}}]\n"
+                f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
+                "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
+            )
+            img_obj = Image.open(uploaded_img)
 
-          for attempt in range(3):
-            try:
-              response = client.models.generate_content(
-                  model="gemini-2.0-flash",
-                  contents=[Image.open(uploaded_img), prompt_text],
-              )
-              success_scan = True
-              break
-            except Exception as api_err:
-              if "503" in str(api_err) or "UNAVAILABLE" in str(api_err):
-                time.sleep(3)
-              else:
-                raise api_err
+            for attempt in range(3):
+              try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash", contents=[img_obj, prompt_text]
+                )
+                if response and response.text:
+                  success_scan = True
+                  break
+              except Exception as api_err:
+                if "503" in str(api_err) or "UNAVAILABLE" in str(api_err):
+                  time.sleep(3)
+                else:
+                  raise api_err
+          except Exception as e:
+            st.error(f"AI සම්බන්ධ වීමේ දෝෂයක් සිදු විය: {str(e)}")
 
         if success_scan and response:
           try:
-            raw_json = (
+            clean_text = (
                 response.text.strip()
                 .replace("```json", "")
                 .replace("```", "")
+                .strip()
             )
-            extracted_students = json.loads(raw_json)
+            extracted_students = json.loads(clean_text)
 
             new_rows = []
             for st_data in extracted_students:
@@ -390,6 +396,9 @@ with tab1:
               )
               save_marks_data(st.session_state.student_data)
               st.success("✅ දත්ත සාර්ථකව ඇතුළත් කරගන්නා ලදී!")
+              st.rerun()
+            else:
+              st.warning("ඡායාරූපයෙන් නිවැරදි දත්ත ලබා ගැනීමට නොහැකි විය.")
           except Exception as e:
             st.error(f"දත්ත සැකසීමේ දෝෂයක් සිදු විය: {str(e)}")
 
@@ -419,40 +428,46 @@ with tab1:
         success_pdf = False
         response = None
         with st.spinner("AI මඟින් PDF එක පරීක්ෂා කරමින් පවතී..."):
-          client = genai.Client(api_key=GEMINI_API_KEY)
-          pdf_bytes = uploaded_pdf.read()
-          pdf_part = types.Part.from_bytes(
-              data=pdf_bytes, mime_type="application/pdf"
-          )
-          sub_list_str = ", ".join(current_pdf_subjects)
-          prompt_text = (
-              f"මෙම PDF ගොනුවෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
-              f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ආකෘතියෙන් ලබාදෙන්න.\n"
-              f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
-              "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
-          )
+          try:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            pdf_bytes = uploaded_pdf.read()
+            pdf_part = types.Part.from_bytes(
+                data=pdf_bytes, mime_type="application/pdf"
+            )
+            sub_list_str = ", ".join(current_pdf_subjects)
+            prompt_text = (
+                f"මෙම PDF ගොනුවෙහි ඇති ශිෂ්‍ය ලකුණු ලේඛනයෙන් සෑම ශිෂ්‍යයෙකුගේම"
+                f" විභාග අංකය (Student ID) සහ ලකුණු පහත JSON ලැයිස්තු ආකෘතියෙන් පමණක් ලබාදෙන්න:\n"
+                f"[{{\"Student ID\": \"3017\", \"Marks\": {{\"විෂය නම\": ලකුණු}}}}]\n"
+                f"අවශ්‍ය විෂයන් පමණක්: {sub_list_str}\n"
+                "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
+            )
 
-          for attempt in range(3):
-            try:
-              response = client.models.generate_content(
-                  model="gemini-2.0-flash", contents=[pdf_part, prompt_text]
-              )
-              success_pdf = True
-              break
-            except Exception as api_err:
-              if "503" in str(api_err) or "UNAVAILABLE" in str(api_err):
-                time.sleep(3)
-              else:
-                raise api_err
+            for attempt in range(3):
+              try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash", contents=[pdf_part, prompt_text]
+                )
+                if response and response.text:
+                  success_pdf = True
+                  break
+              except Exception as api_err:
+                if "503" in str(api_err) or "UNAVAILABLE" in str(api_err):
+                  time.sleep(3)
+                else:
+                  raise api_err
+          except Exception as e:
+            st.error(f"AI සම්බන්ධ වීමේ දෝෂයක් සිදු විය: {str(e)}")
 
         if success_pdf and response:
           try:
-            raw_json = (
+            clean_text = (
                 response.text.strip()
                 .replace("```json", "")
                 .replace("```", "")
+                .strip()
             )
-            extracted_students = json.loads(raw_json)
+            extracted_students = json.loads(clean_text)
 
             new_rows = []
             for st_data in extracted_students:
@@ -483,6 +498,7 @@ with tab1:
               )
               save_marks_data(st.session_state.student_data)
               st.success("✅ දත්ත සාර්ථකව ඇතුළත් කරගන්නා ලදී!")
+              st.rerun()
           except Exception as e:
             st.error(f"දත්ත සැකසීමේ දෝෂයක් සිදු විය: {str(e)}")
 
@@ -668,7 +684,7 @@ with tab2:
     st.write("")
     st.write("")
 
-    # Official Signatures Matching User Requirement: පන්තිභාර ගුරුතුමා -> අංශ ප්‍රධානී -> පරිවේണാධිපති හිමි
+    # Official Signatures
     col_sig1, col_sig2, col_sig3 = st.columns(3)
     with col_sig1:
       st.markdown(
@@ -691,7 +707,7 @@ with tab2:
 
     st.divider()
 
-    # Generate ReportLab PDF for Direct PDF Download
+    # Generate ReportLab PDF for Direct PDF Download with error handling
     try:
       from io import BytesIO
       from reportlab.lib.pagesizes import A4
@@ -787,7 +803,6 @@ with tab2:
         elements.append(t)
         elements.append(Spacer(1, 40))
 
-        # Signatures table for PDF
         sig_data = [[
             "..........................................\nපන්තිභාර ගුරුතුමා / ගුරුතුමී",
             "..........................................\nඅංශ ප්‍රධානී",
@@ -817,9 +832,10 @@ with tab2:
           use_container_width=True,
       )
     except Exception as pdf_err:
-      st.error(
-          "PDF සකස් කිරීමේදී දෝෂයක් ඇති විය. කරුණාකර බ්‍රව්සරයේ Print (Ctrl+P)"
-          " පහසුකම භාවිත කර PDF ලෙස Save කරගන්න."
+      st.info(
+          "💡 PDF ඩවුන්ලෝඩ් බොත්තම ක්‍රියාත්මක කිරීමට අවශ්‍ය ReportLab පුස්තකාලය"
+          " සමහර පරිසරවල නොතිබිය හැක. ඔබට මෙම පිටුව බ්‍රව්සරයෙන් Print (Ctrl+P)"
+          " කර PDF ලෙස සුරක්ෂිත කරගත හැක."
       )
 
 # ----------------------------------------------------
