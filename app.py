@@ -190,7 +190,6 @@ def get_subjects_for_grade(grade_name):
     ]
 
 
-# Helper Functions for Grading & Levels
 def get_grade(marks):
   try:
     m = float(marks)
@@ -329,9 +328,7 @@ with tab1:
       else:
         success_scan = False
         response = None
-        with st.spinner(
-            "AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී... (ටිකක් රැඳී සිටින්න)"
-        ):
+        with st.spinner("AI මඟින් Photo එක පරීක්ෂා කරමින් පවතී..."):
           client = genai.Client(api_key=GEMINI_API_KEY)
           sub_list_str = ", ".join(current_scan_subjects)
           prompt_text = (
@@ -395,8 +392,6 @@ with tab1:
               st.success("✅ දත්ත සාර්ථකව ඇතුළත් කරගන්නා ලදී!")
           except Exception as e:
             st.error(f"දත්ත සැකසීමේ දෝෂයක් සිදු විය: {str(e)}")
-        else:
-          st.error("⚠️ සේවාව තාවකාලිකව කාර්යබහුලයි. කරුණාකර නැවත උත්සාහ කරන්න.")
 
   elif "PDF" in entry_method:
     st.subheader("📄 PDF File එකක් මඟින් ලකුණු ලබා ගැනීම")
@@ -599,7 +594,7 @@ with tab2:
         columns={"index": "අනු අංකය", "Student ID": "විභාග අංකය"}
     )
 
-    # Official Printable Header Box (ඔයාගේ ෆොටෝ එකේ ඇති ආකාරයටම සකස් කරන ලදී)
+    # Official Printable Header Box
     st.markdown(
         f"""
         <div style="border: 2px solid #333; padding: 20px; border-radius: 10px; background-color: #fff; color: #111; font-family: sans-serif;">
@@ -633,9 +628,7 @@ with tab2:
     col_rep_left, col_rep_right = st.columns(2)
 
     with col_rep_left:
-      st.markdown(
-          "📊 **ලකුණු පරාස අනුව සාධන මට්ටමට ප්‍රාහීීම**"
-      )  # ඔයාගේ රූපයේ ඇති නාමය
+      st.markdown("📊 **ලකුණු පරාස අනුව සාධන මට්ටමට ප්‍රාහීීම**")
       try:
         numeric_marks = pd.to_numeric(sub_df["Marks"], errors="coerce").dropna()
         ranges = [
@@ -665,7 +658,7 @@ with tab2:
       st.markdown(
           """
             <div style="border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: #fcfcfc; font-size: 14px;">
-                <b>විෂයාධාර අරුපාවතානේ නිරීක්ෂණ හා සටහන්:</b><br><br>
+                <b>විෂයාභාර ගුරුතුමා/ගුරුතුමීගේ නිරීක්ෂණ හා සටහන්:</b><br><br>
                 මෙම වාරයේ පන්තියේ සමස්ත සාධන මට්ටම යහපත් තත්ත්වයක පවතී. අඩු ලකුණු ලබාගත් සිසුන් සඳහා විශේෂ වැඩසටහන් ක්‍රියාත්මක කළ යුතුය.
             </div>
             """,
@@ -675,46 +668,159 @@ with tab2:
     st.write("")
     st.write("")
 
-    # Signatures layout matching official report
+    # Official Signatures Matching User Requirement: පන්තිභාර ගුරුතුමා -> අංශ ප්‍රධානී -> පරිවේണാධිපති හිමි
     col_sig1, col_sig2, col_sig3 = st.columns(3)
     with col_sig1:
       st.markdown(
           "<hr style='border: 1px dashed #666;'><p style='text-align: center;"
-          " font-size: 13px;'><b>විෂයාභාර ගුරුතුමා/ගුරුතුමී</b></p>",
+          " font-size: 13px;'><b>පන්තිභාර ගුරුතුමා / ගුරුතුමී</b></p>",
           unsafe_allow_html=True,
       )
     with col_sig2:
       st.markdown(
           "<hr style='border: 1px dashed #666;'><p style='text-align: center;"
-          " font-size: 13px;'><b>ප්‍රධාන ප්‍රතිඵල පරීක්ෂක</b></p>",
+          " font-size: 13px;'><b>අංශ ප්‍රධානී</b></p>",
           unsafe_allow_html=True,
       )
     with col_sig3:
       st.markdown(
           "<hr style='border: 1px dashed #666;'><p style='text-align: center;"
-          " font-size: 13px;'><b>පරිපාලකගේ අත්සන</b></p>",
+          " font-size: 13px;'><b>පරිවේണാධිපති හිමි</b></p>",
           unsafe_allow_html=True,
       )
 
     st.divider()
 
-    # Download Button
-    csv_data = display_sub_df[[
-        "අනු අංකය",
-        "විභාග අංකය",
-        "සාධන මට්ටම",
-        "සාමාර්ථය",
-        "ප්‍රුණ මට්ටම",
-        "විශ්ලේෂණය",
-    ]].to_csv(index=False)
-    st.download_button(
-        label="📥 මෙම විෂය වාර්තාව CSV ලෙස ඩවුන්ලෝඩ් කරන්න",
-        data=csv_data,
-        file_name=f"{sel_grade}_{sel_subject}_{sel_term}_{sel_year}.csv",
-        mime="text/csv",
-        type="primary",
-        use_container_width=True,
-    )
+    # Generate ReportLab PDF for Direct PDF Download
+    try:
+      from io import BytesIO
+      from reportlab.lib.pagesizes import A4
+      from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+      from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+      import reportlab.lib.colors as colors
+
+      def create_report_pdf():
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=30,
+            leftMargin=30,
+            topMargin=30,
+            bottomMargin=30,
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'TitleStyle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=16,
+            alignment=1,
+            spaceAfter=4,
+        )
+        sub_title_style = ParagraphStyle(
+            'SubTitleStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            alignment=1,
+            spaceAfter=2,
+        )
+        heading_style = ParagraphStyle(
+            'HeadingStyle',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            alignment=1,
+            spaceAfter=10,
+        )
+
+        elements.append(
+            Paragraph("මහා/දෙනු/ සිරිසුමන ද්විභාෂා පිරිවෙන", title_style)
+        )
+        elements.append(Paragraph("විභාග අංශය", sub_title_style))
+        elements.append(
+            Paragraph(
+                f"වාර පරීක්ෂණ ප්‍රතිඵල විශ්ලේෂණ වාර්තාව ({sel_term}) - {sel_year}",
+                heading_style,
+            )
+        )
+        elements.append(
+            Paragraph(
+                f"<b>ශ්‍රේණිය:</b> {sel_grade} &nbsp;&nbsp;|&nbsp;&nbsp; <b>වර්ෂය:</b> {sel_year} &nbsp;&nbsp;|&nbsp;&nbsp; <b>විෂය:</b> {sel_subject}",
+                sub_title_style,
+            )
+        )
+        elements.append(Spacer(1, 15))
+
+        table_data = [[
+            "අනු අංකය",
+            "විභාග අංකය",
+            "සාධන මට්ටම",
+            "සාමාර්ථය",
+            "ප්‍රුණ මට්ටම",
+            "විශ්ලේෂණය",
+        ]]
+        for index, row in display_sub_df.iterrows():
+          table_data.append([
+              str(row["අනු අංකය"]),
+              str(row["විභාග අංකය"]),
+              str(row["සාධන මට්ටම"]),
+              str(row["සාමාර්ථය"]),
+              str(row["ප්‍රුණ මට්ටම"]),
+              str(row["විශ්ලේෂණය"]),
+          ])
+
+        t = Table(table_data, colWidths=[55, 75, 75, 60, 75, 190])
+        t.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ])
+        )
+        elements.append(t)
+        elements.append(Spacer(1, 40))
+
+        # Signatures table for PDF
+        sig_data = [[
+            "..........................................\nපන්තිභාර ගුරුතුමා / ගුරුතුමී",
+            "..........................................\nඅංශ ප්‍රධානී",
+            "..........................................\nපරිවේണാධිපති හිමි",
+        ]]
+        sig_table = Table(sig_data, colWidths=[180, 180, 180])
+        sig_table.setStyle(
+            TableStyle([
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ])
+        )
+        elements.append(sig_table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+
+      pdf_buffer = create_report_pdf()
+      st.download_button(
+          label="📥 මෙම වාර්තාව PDF ලෙස ඩවුන්ලෝඩ් කරන්න",
+          data=pdf_buffer,
+          file_name=f"{sel_grade}_{sel_subject}_{sel_term}_{sel_year}.pdf",
+          mime="application/pdf",
+          type="primary",
+          use_container_width=True,
+      )
+    except Exception as pdf_err:
+      st.error(
+          "PDF සකස් කිරීමේදී දෝෂයක් ඇති විය. කරුණාකර බ්‍රව්සරයේ Print (Ctrl+P)"
+          " පහසුකම භාවිත කර PDF ලෙස Save කරගන්න."
+      )
 
 # ----------------------------------------------------
 # TAB 3: STUDENT-WISE DEEP ANALYSIS
@@ -794,22 +900,6 @@ with tab4:
 # ----------------------------------------------------
 with tab5:
   st.header("⚙️ දත්ත පාලනය හා සෘජු සංස්කරණය (Data Editor)")
-  st.info("පරණ ඇප් එකෙන් ඩවුන්ලෝඩ් කරගත් CSV ගොනුව පහතින් Upload කරන්න.")
-
-  uploaded_csv = st.file_uploader(
-      "📁 පරණ ඇප් එකේ CSV ෆයිල් එක මෙහි Upload කරන්න", type=["csv"]
-  )
-  if uploaded_csv is not None:
-    try:
-      raw_imported_df = pd.read_csv(uploaded_csv)
-      st.session_state.student_data = raw_imported_df
-      save_marks_data(raw_imported_df)
-      st.success("✅ CSV ෆයිල් එක සාර්ථකව ඇතුළත් කර සුරක්ෂිත කරන ලදී!")
-      st.rerun()
-    except Exception as e:
-      st.error(f"දෝෂයක් සිදු විය: {str(e)}")
-
-  st.divider()
 
   if (
       st.session_state.student_data is not None
@@ -827,7 +917,7 @@ with tab5:
         use_container_width=True,
     ):
       st.session_state.student_data = edited_df
-      save_marks_data(st.session_state.student_data)
+      save_marks_data(edited_df)
       st.success("දත්ත සාර්ථකව යාවත්කාලීන කර සුරක්ෂිත කරන ලදී!")
       st.rerun()
   else:
