@@ -210,7 +210,6 @@ def get_grade(marks):
 
 # Automatic Data Cleaner & Mapper for Imported CSV
 def clean_imported_dataframe(df):
-  # Standardize column names if variations exist
   col_rename = {}
   for col in df.columns:
     c_lower = str(col).strip().lower()
@@ -243,7 +242,6 @@ def clean_imported_dataframe(df):
     if col not in df.columns:
       df[col] = ""
 
-  # Clean and map grades and subjects to match standard app formats
   def clean_grade_name(g):
     g_str = str(g).strip()
     for valid_g in GRADES:
@@ -266,7 +264,6 @@ def clean_imported_dataframe(df):
         "භූගෝල විද්‍යාව (Geog. Phy.)",
     ]
     for valid_s in all_possible_subs:
-      # Match base subject name (e.g., 'සිංහල' or 'Maths')
       base_name = valid_s.split("(")[0].strip()
       if base_name in s_str or s_str in valid_s:
         return valid_s
@@ -344,6 +341,15 @@ with tab1:
     uploaded_img = st.file_uploader(
         "ලකුණු පත්‍රිකාවේ Image එක Upload කරන්න", type=["jpg", "jpeg", "png"]
     )
+
+    # Display image preview with zoom capability if an image is uploaded
+    if uploaded_img is not None:
+      st.image(
+          uploaded_img,
+          caption="අප්ලෝඩ් කරන ලද ලකුණු පත්‍රිකාව (විශාල කර බැලිය හැක)",
+          use_container_width=True,
+      )
+
     col_scan1, col_scan2, col_scan3 = st.columns(3)
     with col_scan1:
       scan_grade = st.selectbox("ශ්‍රේණිය / පන්තිය:", GRADES, key="img_scan_grade")
@@ -683,7 +689,6 @@ with tab5:
   st.header("⚙️ දත්ත පාලනය හා සෘජු සංස්කරණය (Data Editor)")
   st.info("පරණ ඇප් එකෙන් ඩවුන්ලෝඩ් කරගත් CSV ගොනුව පහතින් Upload කරන්න.")
 
-  # CSV File Uploader with Auto-Cleaning & Mapping
   uploaded_csv = st.file_uploader(
       "📁 පරණ ඇප් එකේ CSV ෆයිල් එක මෙහි Upload කරන්න", type=["csv"]
   )
