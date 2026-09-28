@@ -385,7 +385,7 @@ with tab1:
           for attempt in range(3):
             try:
               response = client.models.generate_content(
-                  model="gemini-3.8-flash",
+                  model="gemini-1.5-flash",
                   contents=[Image.open(uploaded_img), prompt_text],
               )
               success_scan = True
