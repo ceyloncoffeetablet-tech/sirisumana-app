@@ -381,11 +381,10 @@ with tab1:
               "සිසුවෙකු නොපැමිණ ඇත්නම් ලකුණු සඳහා 'AB' ලෙස යොදන්න."
           )
 
-          # Retry mechanism for 503 or transient errors
           for attempt in range(3):
             try:
               response = client.models.generate_content(
-                  model="gemini-1.5-flash",
+                  model="gemini-2.0-flash",
                   contents=[Image.open(uploaded_img), prompt_text],
               )
               success_scan = True
@@ -486,7 +485,7 @@ with tab1:
           for attempt in range(3):
             try:
               response = client.models.generate_content(
-                  model="gemini-2.5-flash", contents=[pdf_part, prompt_text]
+                  model="gemini-2.0-flash", contents=[pdf_part, prompt_text]
               )
               success_pdf = True
               break
