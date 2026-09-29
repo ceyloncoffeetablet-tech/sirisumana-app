@@ -18,7 +18,9 @@ st.set_page_config(
 
 # Admin Password & API Configuration
 ADMIN_PASSWORD = "sirisumana123"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY")
+
+# Streamlit Secrets හරහා ආරක්ෂිතව API Key එක ලබා ගැනීම
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 # Permanent Data Files
 DATA_FILE = "student_marks.json"
@@ -280,8 +282,11 @@ with tab1:
     if uploaded_img and st.button(
         "🔍 Photo එක Scan කර දත්ත ලබා ගන්න", type="primary", key="btn_img_scan"
     ):
-      if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        st.error("කරුණාකර API Key එක සකසන්න.")
+      if not GEMINI_API_KEY:
+        st.error(
+            "කරුණාකර Streamlit Secrets හි GEMINI_API_KEY සකසා ඇති බව තහවුරු"
+            " කරන්න."
+        )
       else:
         try:
           with st.spinner(
@@ -312,7 +317,7 @@ with tab1:
             for attempt in range(max_retries):
               try:
                 response = client.models.generate_content(
-                    model="gemini-3.8-flash", contents=[img, prompt_text]
+                    model="gemini-2.5-flash", contents=[img, prompt_text]
                 )
                 break
               except Exception as err:
@@ -386,8 +391,11 @@ with tab1:
     if uploaded_pdf and st.button(
         "📄 PDF එක Scan කර දත්ත ලබා ගන්න", type="primary", key="btn_pdf_scan"
     ):
-      if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        st.error("කරුණාකර API Key එක සකසන්න.")
+      if not GEMINI_API_KEY:
+        st.error(
+            "කරුණාකර Streamlit Secrets හි GEMINI_API_KEY සකසා ඇති බව තහවුරු"
+            " කරන්න."
+        )
       else:
         try:
           with st.spinner(
@@ -903,8 +911,11 @@ with tab3:
       )
       st.plotly_chart(fig, use_container_width=True)
 
+      # Duplicate දත්ත නිසා දෝෂ මඟහරවා ගැනීමට pivot_table භාවිතා කර ඇත
       pivot_df = (
-          student_df.pivot(index="Subject", columns="Term", values="Marks")
+          student_df.pivot_table(
+              index="Subject", columns="Term", values="Marks", aggfunc="first"
+          )
           .fillna(0)
       )
       st.write("### වාර 3 හි විෂයයන් අනුව ලකුණු සාරාංශය")
@@ -979,7 +990,7 @@ with tab5:
     ):
       st.session_state.student_data = edited_df
       save_marks_data(st.session_state.student_data)
-      st.success("දත්ත සාර්ථකව සංස්කරණය කර සුරකින ලدی!")
+      st.success("දත්ත සාර්ථකව සංස්කරණය කර සුරකින ලදී!")
       st.rerun()
 
   st.divider()
